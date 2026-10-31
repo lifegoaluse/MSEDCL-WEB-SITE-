@@ -1,0 +1,238 @@
+{% extends "layout.html" %}
+{% block title %}User Management · MSEDCL Quality Audit{% endblock %}
+{% block heading %}User Access & Role Management{% endblock %}
+
+{% block content %}
+<!-- Create New User ID Card -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Provision New User Account</h3>
+    <span class="card-subtitle">Administrators can create user credentials and assign strict role permissions</span>
+  </div>
+  <form method="post" action="{{ url_for('user_create') }}" class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="filter-group">
+      <label>Username *</label>
+      <input type="text" name="username" class="form-control" placeholder="Unique system login" required>
+    </div>
+    <div class="filter-group">
+      <label>Full Name</label>
+      <input type="text" name="full_name" class="form-control" placeholder="Staff Name">
+    </div>
+    <div class="filter-group">
+      <label>Email Address</label>
+      <input type="email" name="email" class="form-control" placeholder="user@msedcl.in">
+    </div>
+    <div class="filter-group">
+      <label>Assigned Role *</label>
+      <select name="role" class="form-control" required>
+        <option value="admin">Administrator (Full Control)</option>
+        <option value="quality" selected>Quality Team (Audits, Uploads, Warnings)</option>
+        <option value="manager">Manager (Audits, Reports, Approvals)</option>
+        <option value="viewer">Viewer / Read-Only (Restricted to own data)</option>
+        <option value="advisor">Advisor (Own records only)</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Linked Advisor ID / Code</label>
+      <input type="text" name="advisor_id" class="form-control" placeholder="e.g. ADV-1021 or 10425 (for advisor/viewer)">
+    </div>
+    <div class="filter-group">
+      <label>Initial Secure Password *</label>
+      <input type="password" name="password" class="form-control" placeholder="Strong password" required>
+    </div>
+    <div style="display:flex;align-items:flex-end;">
+      <button type="submit" class="btn btn-primary" style="width:100%;">Create Account</button>
+    </div>
+  </form>
+</div>
+
+<!-- Registered Users Table with Interactive Filter -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Registered Accounts (<span id="userCount">{{ users|length }}</span>)</h3>
+      <p class="card-subtitle">Manage user roles, access statuses, and security credentials</p>
+    </div>
+  </div>
+
+  <!-- Live Client-Side Filter Bar -->
+  <div style="background:var(--bg-card-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;">
+    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));gap:10px;">
+      <div class="filter-group">
+        <label>🔍 Search User / Name / Email</label>
+        <input type="text" id="userFilterSearch" oninput="filterUserTable()" placeholder="Type to search..." class="form-control" style="padding:7px 10px;font-size:12.5px;">
+      </div>
+      <div class="filter-group">
+        <label>Filter by Role</label>
+        <select id="userFilterRole" onchange="filterUserTable()" class="form-control" style="padding:7px 10px;font-size:12.5px;">
+          <option value="all">All Roles</option>
+          <option value="admin">Administrator</option>
+          <option value="quality">Quality Team</option>
+          <option value="manager">Manager</option>
+          <option value="viewer">Viewer (Read-Only)</option>
+          <option value="advisor">Advisor (Own Records)</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Filter by Status</label>
+        <select id="userFilterStatus" onchange="filterUserTable()" class="form-control" style="padding:7px 10px;font-size:12.5px;">
+          <option value="all">All Statuses</option>
+          <option value="active">Active Accounts</option>
+          <option value="inactive">Disabled Accounts</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button type="button" onclick="resetUserFilters()" class="btn btn-secondary btn-sm" style="width:100%;height:35px;">Reset Filters</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table" id="usersTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Full Name / Email</th>
+          <th>System Role</th>
+          <th>Linked Advisor</th>
+          <th>Status</th>
+          <th>Created Date</th>
+          <th>Last Login</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="user-row" data-username="{{ u.username|lower }}" data-name="{{ (u.full_name or '')|lower }}" data-email="{{ (u.email or '')|lower }}" data-role="{{ u.role|lower }}" data-status="{{ 'active' if u.active else 'inactive' }}">
+          <td>#{{ u.id }}</td>
+          <td><strong>{{ u.username }}</strong></td>
+          <td>
+            {{ u.full_name or '—' }}<br>
+            <small style="color:var(--text-muted);">{{ u.email or '—' }}</small>
+          </td>
+          <td>
+            <span class="badge {% if u.role=='admin' %}badge-danger{% elif u.role=='quality' %}badge-info{% elif u.role=='manager' %}badge-warning{% else %}badge-neutral{% endif %}">
+              {{ u.role|upper }}
+            </span>
+          </td>
+          <td>
+            {% if u.advisor_id %}
+              <span class="badge badge-info" style="font-family:var(--font-mono);">{{ u.advisor_id }}</span>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:12px;">All Access</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.active %}
+              <span class="badge badge-success">Active</span>
+            {% else %}
+              <span class="badge badge-neutral">Inactive</span>
+            {% endif %}
+          </td>
+          <td>{{ u.created_at or '—' }}</td>
+          <td>{{ u.last_login or 'Never' }}</td>
+          <td>
+            <div class="action-buttons">
+              <!-- Toggle Active / Inactive (Enable / Disable) -->
+              {% if u.id != user.id %}
+              <form method="post" action="{{ url_for('user_toggle_status', user_id=u.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm {% if u.active %}btn-secondary{% else %}btn-success{% endif %}" title="Toggle Active/Inactive">
+                  {{ '⛔ Disable' if u.active else '✅ Enable' }}
+                </button>
+              </form>
+              {% endif %}
+
+              <!-- Password Reset Trigger -->
+              <button onclick="openPasswordModal('{{ u.id }}', '{{ u.username }}')" class="btn btn-secondary btn-sm" title="Change password">🔑 Reset</button>
+
+              <!-- Safe Delete -->
+              {% if u.id != user.id %}
+              <form method="post" action="{{ url_for('user_delete', user_id=u.id) }}" onsubmit="return confirm('Permanently remove user {{ u.username }}? Historical audits and reports will be preserved.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger btn-sm" title="Remove account">🗑️ Delete</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Password Reset Modal -->
+<div id="pwdModal" class="modal-overlay">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:16px;">Reset Password for <span id="modalUsername"></span></h3>
+      <button onclick="closePasswordModal()" style="border:none;background:none;font-size:20px;cursor:pointer;">&times;</button>
+    </div>
+    <form method="post" action="{{ url_for('user_reset_password') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="user_id" id="modalUserId">
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">New Password</label>
+        <input type="password" name="new_password" class="form-control" required placeholder="Enter strong replacement password">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button type="button" onclick="closePasswordModal()" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openPasswordModal(id, username) {
+  document.getElementById('modalUserId').value = id;
+  document.getElementById('modalUsername').innerText = username;
+  document.getElementById('pwdModal').classList.add('open');
+}
+function closePasswordModal() {
+  document.getElementById('pwdModal').classList.remove('open');
+}
+
+// Live interactive filtering for registered accounts
+function filterUserTable() {
+  const query = (document.getElementById('userFilterSearch').value || '').trim().toLowerCase();
+  const role = (document.getElementById('userFilterRole').value || 'all').toLowerCase();
+  const status = (document.getElementById('userFilterStatus').value || 'all').toLowerCase();
+
+  const rows = document.querySelectorAll('#usersTable tbody tr.user-row');
+  let visibleCount = 0;
+
+  rows.forEach(row => {
+    const username = row.getAttribute('data-username') || '';
+    const name = row.getAttribute('data-name') || '';
+    const email = row.getAttribute('data-email') || '';
+    const r = row.getAttribute('data-role') || '';
+    const s = row.getAttribute('data-status') || '';
+
+    const matchesQuery = !query || username.includes(query) || name.includes(query) || email.includes(query);
+    const matchesRole = (role === 'all') || (r === role);
+    const matchesStatus = (status === 'all') || (s === status);
+
+    if (matchesQuery && matchesRole && matchesStatus) {
+      row.style.display = '';
+      visibleCount++;
+    } else {
+      row.style.display = 'none';
+    }
+  });
+
+  const countBadge = document.getElementById('userCount');
+  if (countBadge) countBadge.innerText = visibleCount;
+}
+
+function resetUserFilters() {
+  document.getElementById('userFilterSearch').value = '';
+  document.getElementById('userFilterRole').value = 'all';
+  document.getElementById('userFilterStatus').value = 'all';
+  filterUserTable();
+}
+</script>
+{% endblock %}

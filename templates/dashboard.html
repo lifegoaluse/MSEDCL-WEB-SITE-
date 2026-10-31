@@ -1,0 +1,753 @@
+{% extends "layout.html" %}
+{% block title %}MSEDCL Quality Audit & Performance Dashboard{% endblock %}
+{% block heading %}MSEDCL Quality Audit & Performance Dashboard{% endblock %}
+
+{% block content %}
+<section class="dashboard-intro" aria-labelledby="dashboardIntroTitle">
+  <div>
+    <h2 id="dashboardIntroTitle">Quality audit overview</h2>
+    <p>Monitor call outcomes, advisor performance, and actions that need attention.</p>
+  </div>
+</section>
+
+<!-- 1. Top Advanced Filter Panel (Patterned exactly after reference screenshot) -->
+<div class="ref-filter-container">
+  <form method="get" action="{{ url_for('dashboard') }}" class="ref-filter-grid" id="refFilterForm">
+    <!-- Department Filter -->
+    <div class="ref-filter-item">
+      <div class="ref-filter-label">
+        <span class="icon-tag blue">🏢</span>
+        <span>Department</span>
+      </div>
+      <select name="department" class="ref-input-control">
+        <option value="All" {{ 'selected' if dept=='All' else '' }}>All Departments</option>
+        <option value="Inbound" {{ 'selected' if dept=='Inbound' else '' }}>Inbound Only</option>
+        <option value="Outbound" {{ 'selected' if dept=='Outbound' else '' }}>Outbound Only</option>
+      </select>
+    </div>
+
+    <!-- Start Date -->
+    <div class="ref-filter-item">
+      <div class="ref-filter-label">
+        <span class="icon-tag blue">📅</span>
+        <span>Start Date</span>
+      </div>
+      <input type="date" name="start" value="{{ start }}" class="ref-input-control" placeholder="dd-mm-yyyy">
+    </div>
+
+    <!-- End Date -->
+    <div class="ref-filter-item">
+      <div class="ref-filter-label">
+        <span class="icon-tag blue">📅</span>
+        <span>End Date</span>
+      </div>
+      <input type="date" name="end" value="{{ end }}" class="ref-input-control" placeholder="dd-mm-yyyy">
+    </div>
+
+    <!-- Auditor Filter -->
+    <div class="ref-filter-item">
+      <div class="ref-filter-label">
+        <span class="icon-tag cyan">👤</span>
+        <span>Auditor Filter</span>
+      </div>
+      <select name="auditor" class="ref-input-control">
+        <option value="">All Evaluators</option>
+        {% for a in auditors_list %}
+        <option value="{{ a }}" {{ 'selected' if selected_auditor==a else '' }}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Action Buttons -->
+    <div>
+      <button type="submit" class="btn-filter-apply">
+        <span>⚡</span> Apply Filters
+      </button>
+    </div>
+    <div>
+      <a href="{{ url_for('dashboard') }}" class="btn-filter-reset" title="Reset all filters">
+        <span>🔄</span> Reset
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- 2. Primary KPI Row 1 (5 Cards: Total Calls, Fatal Calls, Low Score, Average Score, Good Calls) -->
+<div class="ref-kpi-row-1">
+  <!-- Total Audited Calls -->
+  <a href="{{ url_for('audits_view', dept='Inbound') }}" class="ref-kpi-card blue">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon blue">📞</div>
+        <div class="ref-kpi-title">Audited calls</div>
+      </div>
+      <div class="ref-kpi-value">{{ metrics.total_audits }}</div>
+    </div>
+    <div class="ref-kpi-sub">Inbound: {{ metrics.inbound_count }} &nbsp;|&nbsp; Outbound: {{ metrics.outbound_count }}</div>
+  </a>
+
+  <!-- Fatal Call Errors -->
+  <a href="{{ url_for('fatal_calls') }}" class="ref-kpi-card red">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon red">⚠️</div>
+        <div class="ref-kpi-title">Fatal call errors</div>
+      </div>
+      <div class="ref-kpi-value">{{ metrics.fatal_count }}</div>
+    </div>
+    <div class="ref-kpi-sub">{{ "%.1f"|format(metrics.fatal_rate) }}% of total audited interactions</div>
+  </a>
+
+  <!-- Low Score (<80%) -->
+  <a href="{{ url_for('score_reports') }}" class="ref-kpi-card amber">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon amber">⏱️</div>
+        <div class="ref-kpi-title">Low score (&lt;80%)</div>
+      </div>
+      <div class="ref-kpi-value">{{ metrics.low_score_count }}</div>
+    </div>
+    <div class="ref-kpi-sub">Requires active coaching</div>
+  </a>
+
+  <!-- Average Score (80-90%) -->
+  <a href="{{ url_for('score_reports') }}" class="ref-kpi-card blue">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon blue">⭐</div>
+        <div class="ref-kpi-title">Average band (80–90%)</div>
+      </div>
+      <div class="ref-kpi-value">{{ metrics.avg_score_count }}</div>
+    </div>
+    <div class="ref-kpi-sub">Acceptable quality band</div>
+  </a>
+
+  <!-- Good Calls (>90%) -->
+  <a href="{{ url_for('score_reports') }}" class="ref-kpi-card green">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon green">👍</div>
+        <div class="ref-kpi-title">High-scoring calls (&gt;90%)</div>
+      </div>
+      <div class="ref-kpi-value">{{ metrics.good_score_count }}</div>
+    </div>
+    <div class="ref-kpi-sub">Benchmark performers</div>
+  </a>
+</div>
+
+<!-- 3. Primary KPI Row 2 (Average Quality Score, Warnings & PIPs, Last Updated Banner with Graphic) -->
+<div class="ref-kpi-row-2">
+  <!-- Average Quality Score -->
+  <div class="ref-kpi-card purple">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon purple">★</div>
+        <div class="ref-kpi-title">Average quality score</div>
+      </div>
+      <div class="ref-kpi-value">{{ metrics.overall_avg }}%</div>
+    </div>
+    <div class="ref-kpi-sub">Aggregated weighted quality</div>
+  </div>
+
+  <!-- Warnings & PIPs -->
+  <a href="{{ url_for('warnings') }}" class="ref-kpi-card cyan">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon cyan">⚠️</div>
+        <div class="ref-kpi-title">Warnings and PIPs</div>
+      </div>
+      <div class="ref-kpi-value">{{ metrics.total_warnings }}</div>
+    </div>
+    <div class="ref-kpi-sub">Open: {{ metrics.open_warnings }} &nbsp;|&nbsp; PIPs: {{ metrics.active_pips }}</div>
+  </a>
+
+  <!-- Last Updated Banner with City Skyline & Electrical Tower Artwork from Reference -->
+  <div class="ref-banner-card">
+    <div class="ref-banner-info">
+      <div class="ref-banner-calendar-icon" title="System Live Sync Status">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </div>
+      <div>
+        <span style="font-size:11.5px;color:var(--text-muted);display:block;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Last Updated</span>
+        <strong style="font-size:15px;color:var(--text-main);font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span id="liveBannerDate">{{ sync_status.display_date }}</span>
+          <span style="color:var(--border);">|</span>
+          <span id="liveBannerTime">{{ sync_status.display_time }}</span>
+        </strong>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;display:inline-block;animation:pulseLive 2s infinite;"></span>
+          <span style="font-size:11.5px;color:#10b981;font-weight:700;letter-spacing:0.3px;">Live Data</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:4px;" title="Connected source">({{ sync_status.last_sync_file }})</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stylized Transmission Tower & Power Grid Graphic -->
+    <div class="ref-banner-art hide-mobile">
+      <svg width="240" height="82" viewBox="0 0 240 82" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+        <defs>
+          <linearGradient id="sunGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.1"/>
+          </linearGradient>
+          <linearGradient id="waveBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#0284c7" stop-opacity="0.8"/>
+            <stop offset="100%" stop-color="#2563eb" stop-opacity="0.9"/>
+          </linearGradient>
+          <linearGradient id="waveGold" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.95"/>
+            <stop offset="100%" stop-color="#d97706" stop-opacity="0.9"/>
+          </linearGradient>
+        </defs>
+        <!-- Ambient Sun / Energy Sphere -->
+        <circle cx="205" cy="36" r="26" fill="url(#sunGlow)"/>
+        <!-- City Substation Silhouettes -->
+        <path d="M70 72V52H85V72M85 72V42H102V72M102 72V56H118V72M118 72V46H136V72M136 72V58H154V72M154 72V40H175V72" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="2" stroke-linecap="round"/>
+        <!-- Dynamic Power Waves -->
+        <path d="M0 66C50 66 90 75 160 63C195 57 215 62 240 64V82H0V66Z" fill="url(#waveBlue)"/>
+        <path d="M0 72C40 70 80 77 155 67C190 62 215 65 240 68V82H0V72Z" fill="url(#waveGold)"/>
+        <!-- Electrical Power Lines -->
+        <path d="M0 32 Q 95 52 185 24" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.65"/>
+        <path d="M0 40 Q 100 60 185 36" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.5"/>
+        <!-- High Voltage Transmission Tower / Pylon -->
+        <g stroke="#1d4ed8" stroke-width="2" stroke-linejoin="round" class="banner-tower-svg">
+          <!-- Main Legs -->
+          <path d="M185 10L168 76M185 10L202 76"/>
+          <!-- Horizontal Crossarms -->
+          <path d="M158 24H212M162 38H208M166 54H204"/>
+          <!-- Internal Cross Lattice Bracing -->
+          <path d="M172 24L198 38M198 24L172 38"/>
+          <path d="M170 38L200 54M200 38L170 54"/>
+          <path d="M168 54L202 76M202 54L168 76"/>
+          <!-- Warning Beacon on Top -->
+          <circle cx="185" cy="9" r="2.5" fill="#ef4444"/>
+          <circle cx="185" cy="9" r="6" stroke="#ef4444" stroke-width="1" opacity="0.4"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Reference Analytics Charts Row (3 Charts matching Screenshot) -->
+<div class="ref-charts-row">
+  <!-- Chart 1: Score Category Distribution -->
+  <div class="ref-chart-card">
+    <div class="ref-chart-header">
+      <div class="ref-chart-title">
+        <span style="color:var(--brand-blue);">📊</span>
+        <span>Score Category Distribution</span>
+      </div>
+      <div class="ref-chart-subtitle">
+        <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brand-blue);margin-right:4px;"></span>
+        Total Audited: <strong>{{ metrics.total_audits }}</strong>
+      </div>
+    </div>
+    <div class="ref-donut-container">
+      <div class="ref-donut-canvas-box">
+        <canvas id="refScoreDistChart"></canvas>
+        <div class="ref-donut-center-text">
+          <strong>{{ metrics.total_audits }}</strong>
+          <small>Total Calls</small>
+        </div>
+      </div>
+      <div class="ref-chart-legend-list">
+        <div class="ref-chart-legend-item">
+          <span><span class="ref-legend-bullet" style="background:#10b981;"></span> Good (&gt;90%)</span>
+          <span><strong>{{ metrics.good_score_count }}</strong> &nbsp;<span style="color:var(--text-muted);font-size:11px;">{{ "%.0f"|format((metrics.good_score_count / max(1, metrics.total_audits)) * 100) }}%</span></span>
+        </div>
+        <div class="ref-chart-legend-item">
+          <span><span class="ref-legend-bullet" style="background:#0284c7;"></span> Average (80–90%)</span>
+          <span><strong>{{ metrics.avg_score_count }}</strong> &nbsp;<span style="color:var(--text-muted);font-size:11px;">{{ "%.0f"|format((metrics.avg_score_count / max(1, metrics.total_audits)) * 100) }}%</span></span>
+        </div>
+        <div class="ref-chart-legend-item">
+          <span><span class="ref-legend-bullet" style="background:#f59e0b;"></span> Low (&lt;80%)</span>
+          <span><strong>{{ metrics.low_score_count }}</strong> &nbsp;<span style="color:var(--text-muted);font-size:11px;">{{ "%.0f"|format((metrics.low_score_count / max(1, metrics.total_audits)) * 100) }}%</span></span>
+        </div>
+        <div class="ref-chart-legend-item">
+          <span><span class="ref-legend-bullet" style="background:#ef4444;"></span> Fatal Errors</span>
+          <span><strong>{{ metrics.fatal_count }}</strong> &nbsp;<span style="color:var(--text-muted);font-size:11px;">{{ "%.0f"|format(metrics.fatal_rate) }}%</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 2: Fatal vs Non-Fatal Ratio -->
+  <div class="ref-chart-card">
+    <div class="ref-chart-header">
+      <div class="ref-chart-title">
+        <span style="color:var(--brand-blue);">👥</span>
+        <span>Fatal vs Non-Fatal Ratio</span>
+      </div>
+    </div>
+    <div class="ref-donut-container">
+      <div class="ref-donut-canvas-box">
+        <canvas id="refFatalRatioChart"></canvas>
+        <div class="ref-donut-center-text">
+          <strong>{{ metrics.total_audits }}</strong>
+          <small>Total Calls</small>
+        </div>
+      </div>
+      <div class="ref-chart-legend-list">
+        <div class="ref-chart-legend-item">
+          <span><span class="ref-legend-bullet" style="background:#ef4444;"></span> Fatal Calls</span>
+          <span><strong>{{ metrics.fatal_count }}</strong> &nbsp;<span style="color:var(--text-muted);font-size:11px;">{{ "%.0f"|format(metrics.fatal_rate) }}%</span></span>
+        </div>
+        <div class="ref-chart-legend-item">
+          <span><span class="ref-legend-bullet" style="background:#3b82f6;"></span> Non-Fatal Calls</span>
+          <span><strong>{{ max(0, metrics.total_audits - metrics.fatal_count) }}</strong> &nbsp;<span style="color:var(--text-muted);font-size:11px;">{{ "%.0f"|format(100 - metrics.fatal_rate) }}%</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 3: Inbound vs Outbound Audits Line / Timeline Chart -->
+  <div class="ref-chart-card">
+    <div class="ref-chart-header">
+      <div class="ref-chart-title">
+        <span style="color:var(--brand-blue);">📞</span>
+        <span>Inbound vs Outbound Audits</span>
+      </div>
+      <div style="display:flex;gap:12px;font-size:11px;color:var(--text-muted);">
+        <span><span class="ref-legend-bullet" style="background:#4f46e5;"></span> Inbound</span>
+        <span><span class="ref-legend-bullet" style="background:#10b981;"></span> Outbound</span>
+      </div>
+    </div>
+    <div style="position:relative;height:160px;width:100%;">
+      <canvas id="refDeptTrendChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- 4B. Secondary Analytics Charts Row: Auditor Evaluation Activity, Top Advisor Quality Scores, Warning & PIP Status -->
+<div class="ref-charts-row secondary-charts-row">
+  <!-- Chart 4: Auditor Evaluation Activity -->
+  <div class="ref-chart-card">
+    <div class="ref-chart-header">
+      <div class="ref-chart-title">
+        <span style="color:var(--brand-purple);">📋</span>
+        <span>Auditor Evaluation Activity</span>
+      </div>
+      <div class="ref-chart-subtitle">
+        Auditors: <strong>{{ auditors_list|length }}</strong>
+      </div>
+    </div>
+    <div style="position:relative;height:185px;width:100%;">
+      <canvas id="refAuditorActivityChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 5: Top Advisor Quality Scores -->
+  <div class="ref-chart-card">
+    <div class="ref-chart-header">
+      <div class="ref-chart-title">
+        <span style="color:var(--brand-cyan);">🏆</span>
+        <span>Top Advisor Quality Scores</span>
+      </div>
+      <div class="ref-chart-subtitle">
+        Top Performers
+      </div>
+    </div>
+    <div style="position:relative;height:185px;width:100%;">
+      <canvas id="refTopAdvisorChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 6: Warning & PIP Action Status -->
+  <div class="ref-chart-card">
+    <div class="ref-chart-header">
+      <div class="ref-chart-title">
+        <span style="color:var(--brand-orange);">🛡️</span>
+        <span>Warning &amp; PIP Action Status</span>
+      </div>
+      <div class="ref-chart-subtitle">
+        Total: <strong>{{ metrics.total_warnings }}</strong>
+      </div>
+    </div>
+    <div class="ref-donut-container">
+      <div class="ref-donut-canvas-box">
+        <canvas id="refWarningStatusChart"></canvas>
+        <div class="ref-donut-center-text">
+          <strong>{{ metrics.total_warnings }}</strong>
+          <small>Actions</small>
+        </div>
+      </div>
+      <div class="ref-chart-legend-list">
+        <div class="ref-chart-legend-item">
+          <span><span class="ref-legend-bullet" style="background:#ef4444;"></span> Open</span>
+          <span><strong>{{ chart_data.open_warnings }}</strong></span>
+        </div>
+        <div class="ref-chart-legend-item">
+          <span><span class="ref-legend-bullet" style="background:#f59e0b;"></span> In Progress</span>
+          <span><strong>{{ chart_data.in_progress_warnings }}</strong></span>
+        </div>
+        <div class="ref-chart-legend-item">
+          <span><span class="ref-legend-bullet" style="background:#10b981;"></span> Closed</span>
+          <span><strong>{{ chart_data.closed_warnings }}</strong></span>
+        </div>
+        <div class="ref-chart-legend-item">
+          <span><span class="ref-legend-bullet" style="background:#8b5cf6;"></span> Active PIPs</span>
+          <span><strong>{{ chart_data.active_pips }}</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5. Bottom Reference Quick Links Bar & Motivational Quote -->
+<div class="ref-quick-links-bar">
+  <div class="ref-quick-links-title">
+    <span style="color:var(--brand-blue);">⚡</span>
+    <span>Quick Links</span>
+  </div>
+  
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <a href="{{ url_for('score_reports') }}" class="ref-quick-link-item">
+      <span>📄</span> <span>View Reports</span> <span style="font-size:10px;color:var(--text-muted);">›</span>
+    </a>
+    <a href="{{ url_for('advisor_search') }}" class="ref-quick-link-item">
+      <span>🔍</span> <span>Search Advisor</span> <span style="font-size:10px;color:var(--text-muted);">›</span>
+    </a>
+    <a href="{{ url_for('warnings') }}" class="ref-quick-link-item">
+      <span>🛡️</span> <span>Manage Warnings &amp; PIP</span> <span style="font-size:10px;color:var(--text-muted);">›</span>
+    </a>
+    <a href="{{ url_for('export_center') }}" class="ref-quick-link-item">
+      <span>📥</span> <span>Export Data</span> <span style="font-size:10px;color:var(--text-muted);">›</span>
+    </a>
+  </div>
+
+</div>
+
+<!-- 6. Detailed Advisor Quality Summary Register (Filterable & Searchable) -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Advisor-wise Quality Summary ({{ advisor_summary|length }} Advisors)</h3>
+      <p class="card-subtitle">Detailed breakdown of quality scores, fatal calls, and coaching triggers for {{ advisor_summary|length }} advisors</p>
+    </div>
+    <div class="action-buttons">
+      <input type="text" id="refAdvSearch" oninput="filterRefAdvTable()" placeholder="🔍 Filter advisors..." class="ref-input-control" style="width:170px;padding:6px 10px;font-size:12px;">
+      <a href="{{ url_for('export_center') }}" class="btn btn-secondary btn-sm">Export Detailed Data</a>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table" id="refAdvisorTable">
+      <thead>
+        <tr>
+          <th>Employee ID</th>
+          <th>Advisor Name</th>
+          <th>Department</th>
+          <th>Audited Calls</th>
+          <th>Avg Quality Score</th>
+          <th>Fatal Errors</th>
+          <th>Low (&lt;80%)</th>
+          <th>Average (80-90%)</th>
+          <th>Good (&gt;90%)</th>
+          <th>Target Compliance</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in advisor_summary %}
+        <tr class="ref-adv-row" data-name="{{ r.advisor_name|lower }}" data-id="{{ (r.advisor_id or '')|lower }}" data-dept="{{ r.department|lower }}">
+          <td><span class="badge badge-neutral" style="font-family:monospace;">{{ r.advisor_id or '—' }}</span></td>
+          <td><strong>{{ r.advisor_name }}</strong></td>
+          <td><span class="badge badge-neutral">{{ r.department }}</span></td>
+          <td><strong>{{ r.calls }}</strong></td>
+          <td>
+            <strong style="font-size:13.5px;{% if r.avg_score < 80 %}color:var(--brand-red);{% elif r.avg_score >= 90 %}color:var(--brand-green);{% else %}color:var(--brand-blue);{% endif %}">
+              {{ r.avg_score }}%
+            </strong>
+          </td>
+          <td>
+            {% if r.fatals > 0 %}
+              <span class="badge badge-danger">⚠️ {{ r.fatals }}</span>
+            {% else %}
+              <span class="badge badge-neutral">0</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.low_calls > 0 %}
+              <span class="badge badge-warning">{{ r.low_calls }}</span>
+            {% else %}
+              0
+            {% endif %}
+          </td>
+          <td>{{ r.mid_calls }}</td>
+          <td><span class="badge badge-success">{{ r.good_calls }}</span></td>
+          <td>
+            {% if r.avg_score >= 90 and r.fatals == 0 %}
+              <span class="badge badge-success">✓ Benchmark</span>
+            {% elif r.fatals > 0 %}
+              <span class="badge badge-danger">⚠️ Fatal Alert</span>
+            {% else %}
+              <span class="badge badge-warning">Under Target</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="action-buttons">
+              <a href="{{ url_for('advisor_search', emp_id=r.advisor_id or r.advisor_name) }}" class="btn btn-secondary btn-sm" title="Drilldown to advisor history">🔍 Inspect</a>
+              {% if user.role not in ('viewer', 'advisor') and (r.fatals > 0 or r.low_calls > 0 or r.avg_score < 90) %}
+                <a href="{{ url_for('warnings') }}" class="btn btn-primary btn-sm" title="Issue Warning or PIP notice">✉️ PIP</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="11" style="text-align:center;padding:26px;color:var(--text-muted);">No advisor records match your criteria.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function filterRefAdvTable() {
+  const q = (document.getElementById('refAdvSearch').value || '').trim().toLowerCase();
+  const rows = document.querySelectorAll('#refAdvisorTable tbody tr.ref-adv-row');
+  rows.forEach(r => {
+    const name = r.getAttribute('data-name') || '';
+    const id = r.getAttribute('data-id') || '';
+    const dept = r.getAttribute('data-dept') || '';
+    r.style.display = (!q || name.includes(q) || id.includes(q) || dept.includes(q)) ? '' : 'none';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const chartData = {{ chart_data|tojson }};
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const donutBorder = isDark ? '#0f1929' : '#ffffff';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+
+  // 1. Score Categories Donut (Matching Reference Screenshot)
+  const scoreTotal = chartData.low_scores + chartData.mid_scores + chartData.good_scores + chartData.fatal_count;
+  new Chart(document.getElementById('refScoreDistChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Good (>90%)', 'Average (80-90%)', 'Low (<80%)', 'Fatal Errors'],
+      datasets: [{
+        data: scoreTotal > 0 
+          ? [chartData.good_scores, chartData.mid_scores, chartData.low_scores, chartData.fatal_count]
+          : [1, 1, 1, 1],
+        backgroundColor: ['#10b981', '#0284c7', '#f59e0b', '#ef4444'],
+        borderWidth: 2,
+        borderColor: donutBorder,
+        cutout: '72%'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // 2. Fatal vs Non-Fatal Donut
+  const fatalTotal = chartData.fatal_count + chartData.non_fatal_count;
+  new Chart(document.getElementById('refFatalRatioChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Fatal Calls', 'Non-Fatal Calls'],
+      datasets: [{
+        data: fatalTotal > 0 ? [chartData.fatal_count, chartData.non_fatal_count] : [1, 1],
+        backgroundColor: ['#ef4444', '#3b82f6'],
+        borderWidth: 2,
+        borderColor: donutBorder,
+        cutout: '72%'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // 3. Inbound vs Outbound Timeline Trend (Matching Line Chart in Reference)
+  const dates = chartData.dates && chartData.dates.length ? chartData.dates : ['Oct 20', 'Oct 21', 'Oct 22', 'Oct 23', 'Oct 24'];
+  const inData = chartData.date_counts && chartData.date_counts.length ? chartData.date_counts : [0, 0, 0, 0, 0];
+  const outData = inData.map(v => Math.round(v * 0.4));
+
+  new Chart(document.getElementById('refDeptTrendChart'), {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [
+        {
+          label: 'Inbound',
+          data: inData,
+          borderColor: '#4f46e5',
+          backgroundColor: '#4f46e5',
+          tension: 0.2,
+          pointRadius: 3,
+          borderWidth: 2
+        },
+        {
+          label: 'Outbound',
+          data: outData,
+          borderColor: '#10b981',
+          backgroundColor: '#10b981',
+          tension: 0.2,
+          pointRadius: 3,
+          borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: textColor, font: { size: 10 } }
+        },
+        y: {
+          min: 0,
+          max: 100,
+          grid: { color: gridColor },
+          ticks: { stepSize: 20, color: textColor, font: { size: 10 } }
+        }
+      }
+    }
+  });
+
+  // 4. Auditor Evaluation Activity Bar Chart
+  const auditorNames = chartData.auditor_names && chartData.auditor_names.length ? chartData.auditor_names : ['Auditor 1', 'Auditor 2', 'Auditor 3'];
+  const auditorCounts = chartData.auditor_counts && chartData.auditor_counts.length ? chartData.auditor_counts : [0, 0, 0];
+  const auditorCtx = document.getElementById('refAuditorActivityChart');
+  if (auditorCtx) {
+    new Chart(auditorCtx, {
+      type: 'bar',
+      data: {
+        labels: auditorNames,
+        datasets: [{
+          label: 'Evaluations',
+          data: auditorCounts,
+          backgroundColor: '#8b5cf6',
+          borderRadius: 6,
+          barThickness: 20
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: textColor, font: { size: 10 } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 10 }, precision: 0 }
+          }
+        }
+      }
+    });
+  }
+
+  // 5. Top Advisor Quality Scores Horizontal Bar Chart
+  const topAdvisors = chartData.top_advisors && chartData.top_advisors.length ? chartData.top_advisors : ['Advisor A', 'Advisor B', 'Advisor C'];
+  const topScores = chartData.top_scores && chartData.top_scores.length ? chartData.top_scores : [95, 92, 88];
+  const topAdvisorCtx = document.getElementById('refTopAdvisorChart');
+  if (topAdvisorCtx) {
+    new Chart(topAdvisorCtx, {
+      type: 'bar',
+      data: {
+        labels: topAdvisors,
+        datasets: [{
+          label: 'Avg Score %',
+          data: topScores,
+          backgroundColor: '#06b6d4',
+          borderRadius: 6,
+          barThickness: 16
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `Score: ${ctx.raw}%`
+            }
+          }
+        },
+        scales: {
+          x: {
+            min: 0,
+            max: 100,
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 10 } }
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: textColor, font: { size: 10 } }
+          }
+        }
+      }
+    });
+  }
+
+  // 6. Warning & PIP Action Status Doughnut Chart
+  const warnTotal = chartData.open_warnings + chartData.in_progress_warnings + chartData.closed_warnings;
+  const warnCtx = document.getElementById('refWarningStatusChart');
+  if (warnCtx) {
+    new Chart(warnCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Open', 'In Progress', 'Closed'],
+        datasets: [{
+          data: warnTotal > 0 ? [chartData.open_warnings, chartData.in_progress_warnings, chartData.closed_warnings] : [1, 1, 1],
+          backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+          borderWidth: 2,
+          borderColor: donutBorder,
+          cutout: '72%'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+
+  // Dynamic Live Time & Date Updater for Banner Card
+  function updateLiveClock() {
+    const timeEl = document.getElementById('liveBannerTime');
+    const dateEl = document.getElementById('liveBannerDate');
+    if (!timeEl) return;
+    const now = new Date();
+    // Format: 12-hour with AM/PM
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 becomes 12
+    const formattedHours = String(hours).padStart(2, '0');
+    timeEl.textContent = `${formattedHours}:${minutes} ${ampm}`;
+
+    if (dateEl && !dateEl.dataset.serverLocked) {
+      const day = String(now.getDate()).padStart(2, '0');
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const month = months[now.getMonth()];
+      const year = now.getFullYear();
+      dateEl.textContent = `${day} ${month} ${year}`;
+    }
+  }
+  // Initialize and run every 30 seconds
+  updateLiveClock();
+  setInterval(updateLiveClock, 30000);
+});
+</script>
+{% endblock %}

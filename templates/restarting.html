@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Restarting Server · MSEDCL Quality Audit</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta http-equiv="refresh" content="4;url={{ url_for('login') }}">
+</head>
+<body class="restart-page">
+  <main class="restart-card">
+    <div class="restart-mark" aria-hidden="true">↻</div>
+    <h2>Restarting the system</h2>
+    <p>
+      The MSEDCL Quality Audit Portal is restarting its services. You’ll be redirected to sign in when it is ready.
+    </p>
+    <div class="restart-status">
+      <span class="badge badge-success">Restart in progress</span>
+      <span>Returning to sign in shortly</span>
+    </div>
+    <div style="margin-top:20px;">
+      <a href="{{ url_for('login') }}" class="btn btn-primary">
+        Return to sign in
+      </a>
+    </div>
+  </main>
+</body>
+</html>
