@@ -463,7 +463,13 @@ function DashboardContent({
   )
 }
 
-export function DashboardPage({ user }: { user: SessionUser }) {
+export function DashboardPage({
+  user,
+  onPageReady,
+}: {
+  user: SessionUser
+  onPageReady: () => void
+}) {
   const [filters, setFilters] = useState(filterFromUrl)
   const [data, setData] = useState<DashboardData | null>(null)
   const [error, setError] = useState('')
@@ -471,6 +477,8 @@ export function DashboardPage({ user }: { user: SessionUser }) {
 
   useEffect(() => {
     let active = true
+    let loadingTimeout: number | undefined
+    const startedAt = Date.now()
     const query = makeSearch(filters)
     requestJson<DashboardData>(`/dashboard${query ? `?${query}` : ''}`)
       .then((response) => {
@@ -485,12 +493,19 @@ export function DashboardPage({ user }: { user: SessionUser }) {
         setError(requestError instanceof Error ? requestError.message : 'Dashboard data could not be loaded.')
       })
       .finally(() => {
-        if (active) setLoading(false)
+        const remainingTime = Math.max(0, 1000 - (Date.now() - startedAt))
+        loadingTimeout = window.setTimeout(() => {
+          if (active) {
+            setLoading(false)
+            onPageReady()
+          }
+        }, remainingTime)
       })
     return () => {
       active = false
+      if (loadingTimeout !== undefined) window.clearTimeout(loadingTimeout)
     }
-  }, [filters])
+  }, [filters, onPageReady])
 
   function applyFilters(next: DashboardFilters) {
     setLoading(true)
@@ -504,7 +519,10 @@ export function DashboardPage({ user }: { user: SessionUser }) {
     <div className="react-dashboard">
       {error && <div className="alert alert-danger" role="alert">{error}</div>}
       {loading && !data ? (
-        <div className="card dashboard-loading" role="status">Loading dashboard data…</div>
+        <div className="card dashboard-loading" role="status">
+          <span className="navigation-loading-spinner" aria-hidden="true" />
+          Loading dashboard data…
+        </div>
       ) : data ? (
         <DashboardContent data={data} user={user} onApplyFilters={applyFilters} />
       ) : (
@@ -521,7 +539,12 @@ export function DashboardPage({ user }: { user: SessionUser }) {
           >Try again</button>
         </div>
       )}
-      {loading && data && <p className="dashboard-refreshing" role="status">Updating dashboard…</p>}
+      {loading && data && (
+        <p className="dashboard-refreshing" role="status">
+          <span className="navigation-loading-spinner" aria-hidden="true" />
+          Updating dashboard…
+        </p>
+      )}
     </div>
   )
 }

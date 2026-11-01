@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, requestJson } from '../lib/api/client'
 import { AppShell } from '../components/AppShell'
 import { AdminPage } from '../features/admin/AdminPage'
@@ -11,11 +11,57 @@ const LEGACY_APP_URL =
   import.meta.env.VITE_LEGACY_APP_URL ??
   (import.meta.env.DEV ? 'http://127.0.0.1:5000' : window.location.origin)
 
+const MINIMUM_NAVIGATION_NOTICE_MS = 1800
+
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(null)
   const isLoginPage = window.location.pathname === '/login'
-  const isAdminPage = window.location.pathname.startsWith('/admin/')
+  const [pathname, setPathname] = useState(window.location.pathname)
+  const [navigationLoading, setNavigationLoading] = useState(false)
+  const navigationStartedAt = useRef<number | null>(null)
+  const navigationId = useRef(0)
   const [loading, setLoading] = useState(!isLoginPage)
+
+  const startNavigation = useCallback((path: string) => {
+    if (path === window.location.pathname) return
+    window.history.pushState(null, '', path)
+    navigationId.current += 1
+    navigationStartedAt.current = Date.now()
+    setPathname(path)
+    setNavigationLoading(true)
+  }, [])
+
+  const markPageReady = useCallback(() => {
+    const startedAt = navigationStartedAt.current
+    if (startedAt === null) return
+
+    const currentNavigationId = navigationId.current
+    const remainingTime = Math.max(
+      0,
+      MINIMUM_NAVIGATION_NOTICE_MS - (Date.now() - startedAt),
+    )
+    window.setTimeout(() => {
+      if (navigationId.current !== currentNavigationId) return
+      navigationStartedAt.current = null
+      setNavigationLoading(false)
+    }, remainingTime)
+  }, [])
+
+  useEffect(() => {
+    if (isLoginPage) return
+
+    function syncPathname() {
+      const currentPath = window.location.pathname
+      if (currentPath === pathname) return
+      navigationId.current += 1
+      navigationStartedAt.current = Date.now()
+      setPathname(currentPath)
+      setNavigationLoading(true)
+    }
+
+    window.addEventListener('popstate', syncPathname)
+    return () => window.removeEventListener('popstate', syncPathname)
+  }, [isLoginPage, pathname])
 
   useEffect(() => {
     if (isLoginPage) return
@@ -63,10 +109,15 @@ export default function App() {
   }
 
   return (
-    <AppShell user={user}>
-      {isAdminPage
-        ? <AdminPage path={window.location.pathname} user={user} />
-        : <DashboardPage user={user} />}
+    <AppShell
+      user={user}
+      pathname={pathname}
+      navigationLoading={navigationLoading}
+      onNavigate={startNavigation}
+    >
+      {pathname.startsWith('/admin/')
+        ? <AdminPage key={pathname} path={pathname} user={user} onPageReady={markPageReady} />
+        : <DashboardPage user={user} onPageReady={markPageReady} />}
     </AppShell>
   )
 }

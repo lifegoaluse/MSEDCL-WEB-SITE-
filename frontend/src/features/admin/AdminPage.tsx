@@ -50,6 +50,7 @@ interface SystemSettings {
 interface AdminPageProps {
   path: string
   user: SessionUser
+  onPageReady: () => void
 }
 
 const userRoles: UserRole[] = ['quality', 'manager', 'viewer', 'advisor']
@@ -113,7 +114,13 @@ function AdminPageHeading({ path, user }: { path: string; user: SessionUser }) {
   )
 }
 
-function UserManagement({ user }: { user: SessionUser }) {
+function UserManagement({
+  user,
+  onPageReady,
+}: {
+  user: SessionUser
+  onPageReady: () => void
+}) {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
@@ -147,10 +154,13 @@ function UserManagement({ user }: { user: SessionUser }) {
       .catch((reason: unknown) => {
         if (active) setError(reason instanceof Error ? reason.message : 'Could not load user accounts.')
       })
+      .finally(() => {
+        if (active) onPageReady()
+      })
     return () => {
       active = false
     }
-  }, [setError])
+  }, [onPageReady, setError])
 
   const visibleUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -345,7 +355,7 @@ function UserManagement({ user }: { user: SessionUser }) {
   )
 }
 
-function SettingsPage() {
+function SettingsPage({ onPageReady }: { onPageReady: () => void }) {
   const [settings, setSettings] = useState<SystemSettings | null>(null)
   const [savedSettings, setSavedSettings] = useState<SystemSettings | null>(null)
   const [testRecipient, setTestRecipient] = useState('')
@@ -376,10 +386,13 @@ function SettingsPage() {
       .catch((reason: unknown) => {
         if (active) setError(reason instanceof Error ? reason.message : 'Could not load system settings.')
       })
+      .finally(() => {
+        if (active) onPageReady()
+      })
     return () => {
       active = false
     }
-  }, [setError])
+  }, [onPageReady, setError])
 
   function update(key: keyof SystemSettings, value: string) {
     setSettings((current) => current ? { ...current, [key]: value } : current)
@@ -591,15 +604,26 @@ function SettingsPage() {
   )
 }
 
-function AuditLogs() {
+function AuditLogs({ onPageReady }: { onPageReady: () => void }) {
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [error, setError] = useState('')
 
   useEffect(() => {
+    let active = true
     requestJson<{ logs: AuditLog[] }>('/admin/audit-logs')
-      .then((response) => setLogs(response.logs))
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Could not load audit activity.'))
-  }, [])
+      .then((response) => {
+        if (active) setLogs(response.logs)
+      })
+      .catch((reason: unknown) => {
+        if (active) setError(reason instanceof Error ? reason.message : 'Could not load audit activity.')
+      })
+      .finally(() => {
+        if (active) onPageReady()
+      })
+    return () => {
+      active = false
+    }
+  }, [onPageReady])
 
   return (
     <>
@@ -622,15 +646,15 @@ function AuditLogs() {
   )
 }
 
-export function AdminPage({ path, user }: AdminPageProps) {
+export function AdminPage({ path, user, onPageReady }: AdminPageProps) {
   return (
     <div className="admin-page">
       <AdminPageHeading path={path} user={user} />
       {path === '/admin/users'
-        ? <UserManagement user={user} />
+        ? <UserManagement user={user} onPageReady={onPageReady} />
         : path === '/admin/audit-logs'
-          ? <AuditLogs />
-          : <SettingsPage />}
+          ? <AuditLogs onPageReady={onPageReady} />
+          : <SettingsPage onPageReady={onPageReady} />}
     </div>
   )
 }

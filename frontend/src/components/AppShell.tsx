@@ -9,6 +9,9 @@ const LEGACY_APP_URL =
 interface AppShellProps {
   children: ReactNode
   user: SessionUser
+  pathname: string
+  navigationLoading: boolean
+  onNavigate: (path: string) => void
 }
 
 type SidebarIconName =
@@ -99,15 +102,18 @@ function NavigationLink({
   icon,
   label,
   href,
+  pathname,
+  onNavigate,
 }: {
   icon: SidebarIconName
   label: string
   href: string
+  pathname: string
+  onNavigate: (path: string) => void
 }) {
   const target = href.startsWith('/admin/') || href === '/'
     ? href
     : `${LEGACY_APP_URL}${href}`
-  const pathname = window.location.pathname
   const active = pathname === href || (href !== '/' && pathname.startsWith(`${href}/`))
 
   return (
@@ -116,6 +122,11 @@ function NavigationLink({
       href={target}
       title={label}
       aria-current={active ? 'page' : undefined}
+      onClick={(event) => {
+        if (target !== href || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+        event.preventDefault()
+        onNavigate(href)
+      }}
     >
       <span className="icon"><SidebarIcon name={icon} /></span>
       <span className="nav-label">{label}</span>
@@ -126,25 +137,37 @@ function NavigationLink({
 function NavigationGroup({
   title,
   items,
+  pathname,
+  onNavigate,
 }: {
   title: string
   items: NavigationItem[]
+  pathname: string
+  onNavigate: (path: string) => void
 }) {
   return (
     <div className="sidebar-nav-group">
       <p className="nav-section-title">{title}</p>
-      {items.map((item) => <NavigationLink key={item.href} {...item} />)}
+      {items.map((item) => (
+        <NavigationLink key={item.href} {...item} pathname={pathname} onNavigate={onNavigate} />
+      ))}
     </div>
   )
 }
 
-export function AppShell({ children, user }: AppShellProps) {
+export function AppShell({
+  children,
+  user,
+  pathname,
+  navigationLoading,
+  onNavigate,
+}: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const pageTitle = window.location.pathname === '/admin/users'
+  const pageTitle = pathname === '/admin/users'
     ? 'User management'
-    : window.location.pathname === '/admin/settings'
+    : pathname === '/admin/settings'
       ? 'System settings'
-      : window.location.pathname === '/admin/audit-logs'
+      : pathname === '/admin/audit-logs'
         ? 'Audit activity'
         : 'MSEDCL Quality Audit & Performance Dashboard'
   const [darkMode, setDarkMode] = useState(
@@ -207,7 +230,16 @@ export function AppShell({ children, user }: AppShellProps) {
       />
       <aside className="app-sidebar" aria-label="Main navigation">
         <div className="sidebar-brand">
-          <a href="/" className="brand-wrapper" aria-label="MSEDCL Quality Audit dashboard">
+          <a
+            href="/"
+            className="brand-wrapper"
+            aria-label="MSEDCL Quality Audit dashboard"
+            onClick={(event) => {
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault()
+              onNavigate('/')
+            }}
+          >
             <span className="sidebar-brand-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" focusable="false">
                 <path d="m13.5 2-8 11h5l-.5 9 8.5-12h-5l.5-8Z" fill="currentColor" />
@@ -231,15 +263,23 @@ export function AppShell({ children, user }: AppShellProps) {
         <nav className="sidebar-nav">
           <div className="sidebar-nav-group">
             <p className="nav-section-title">Workspace</p>
-            <NavigationLink icon="dashboard" label="Dashboard" href="/" />
+            <NavigationLink
+              icon="dashboard"
+              label="Dashboard"
+              href="/"
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
           </div>
-          <NavigationGroup title="Audit work" items={auditLinks} />
-          <NavigationGroup title="Insights" items={insightLinks} />
-          <NavigationGroup title="Follow-up & data" items={actionLinks} />
+          <NavigationGroup title="Audit work" items={auditLinks} pathname={pathname} onNavigate={onNavigate} />
+          <NavigationGroup title="Insights" items={insightLinks} pathname={pathname} onNavigate={onNavigate} />
+          <NavigationGroup title="Follow-up & data" items={actionLinks} pathname={pathname} onNavigate={onNavigate} />
           {(user.role === 'admin' || user.role === 'manager') && (
             <NavigationGroup
               title="Administration"
               items={user.role === 'admin' ? adminLinks : adminLinks.slice(0, 1)}
+              pathname={pathname}
+              onNavigate={onNavigate}
             />
           )}
         </nav>
@@ -305,6 +345,12 @@ export function AppShell({ children, user }: AppShellProps) {
           </div>
         </header>
         <section className="content-body">
+          {navigationLoading && (
+            <div className="navigation-loading-toast" role="status" aria-live="polite">
+              <span className="navigation-loading-spinner" aria-hidden="true" />
+              <span>Loading page, please wait…</span>
+            </div>
+          )}
           {signOutError && <div className="alert alert-danger" role="alert">{signOutError}</div>}
           {children}
         </section>
