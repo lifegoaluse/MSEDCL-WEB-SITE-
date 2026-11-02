@@ -36,8 +36,8 @@
 | `/admin/users` | ✅ | ✅ | ✅ | ❌ | ❌ | User management |
 | `/admin/users/create` | ✅ | ✅ | ✅* | ❌ | ❌ | *Manager cannot create admin accounts |
 | `/admin/users/<id>/toggle` | ✅ | ✅ | ✅* | ❌ | ❌ | *Manager cannot deactivate admins |
-| `/admin/users/reset-password` | ✅ | ❌ | ❌ | ❌ | ❌ | Admin only |
-| `/admin/users/<id>/delete` | ✅ | ❌ | ❌ | ❌ | ❌ | Admin only |
+| `/admin/users/reset-password` | ✅ | ✅ | ✅* | ❌ | ❌ | *Manager/Quality cannot reset admin passwords |
+| `/admin/users/<id>/delete` | ✅ | ✅ | ✅* | ❌ | ❌ | *Manager/Quality cannot delete admin accounts |
 | `/admin/settings` | ✅ | ❌ | ❌ | ❌ | ❌ | System configuration |
 | `/admin/settings/test-email` | ✅ | ❌ | ❌ | ❌ | ❌ | SMTP testing |
 | `/admin/audit-logs` | ✅ | ❌ | ❌ | ❌ | ❌ | Security audit trail |
