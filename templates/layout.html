@@ -133,10 +133,12 @@
           <span class="icon">📥</span>
           <span>Export Center</span>
         </a>
-        <a href="{{ url_for('upload') }}" class="nav-item {{ 'active' if page=='upload' else '' }}" title="Import Files">
-          <span class="icon">📤</span>
-          <span>Import Files</span>
-        </a>
+        {% if user.role in ('admin', 'quality') %}
+          <a href="{{ url_for('upload') }}" class="nav-item {{ 'active' if page=='upload' else '' }}" title="Import Files">
+            <span class="icon">📤</span>
+            <span>Import Files</span>
+          </a>
+        {% endif %}
         {% if user.role in ('admin', 'manager') %}
         <a href="{{ url_for('user_management') }}" class="nav-item {{ 'active' if page=='users' else '' }}" title="User Management">
           <span class="icon">👥</span>

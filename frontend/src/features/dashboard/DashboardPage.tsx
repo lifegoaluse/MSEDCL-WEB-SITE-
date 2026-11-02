@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { ApiError, requestJson } from '../../lib/api/client'
 import type { SessionUser } from '../auth/types'
 import type {
@@ -117,6 +117,70 @@ function ChartLegend({
         </div>
       ))}
     </div>
+  )
+}
+
+function ChartCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string
+  subtitle?: ReactNode
+  children: ReactNode
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (expanded && !dialog.open) dialog.showModal()
+    if (!expanded && dialog.open) dialog.close()
+  }, [expanded])
+
+  return (
+    <section className="ref-chart-card">
+      <header className="ref-chart-header">
+        <h3 className="ref-chart-title">{title}</h3>
+        <div className="chart-header-actions">
+          {subtitle && <span className="ref-chart-subtitle">{subtitle}</span>}
+          <button
+            type="button"
+            className="chart-expand-button"
+            onClick={() => setExpanded(true)}
+            aria-label={`Expand ${title} chart`}
+          >
+            Expand
+          </button>
+        </div>
+      </header>
+      {children}
+      <dialog
+        ref={dialogRef}
+        className="chart-dialog"
+        aria-labelledby={titleId}
+        onCancel={(event) => {
+          event.preventDefault()
+          setExpanded(false)
+        }}
+        onClose={() => setExpanded(false)}
+      >
+        <div className="chart-dialog-header">
+          <h2 id={titleId}>{title}</h2>
+          <button
+            type="button"
+            className="chart-dialog-close"
+            onClick={() => setExpanded(false)}
+            aria-label="Close expanded chart"
+          >
+            Close
+          </button>
+        </div>
+        <div className="chart-dialog-content">{children}</div>
+      </dialog>
+    </section>
   )
 }
 
@@ -391,15 +455,13 @@ function DashboardContent({
       </div>
 
       <div className="ref-charts-row">
-        <section className="ref-chart-card">
-          <header className="ref-chart-header"><h3 className="ref-chart-title">📊 Score Category Distribution</h3><span className="ref-chart-subtitle">Total Audited: <strong>{countText(total)}</strong></span></header>
+        <ChartCard title="📊 Score Category Distribution" subtitle={<>Total Audited: <strong>{countText(total)}</strong></>}>
           <div className="ref-donut-container">
             <RingChart values={scoreItems.map((item) => item.value)} colors={scoreItems.map((item) => item.color)} total={total} label="Total Calls" />
             <ChartLegend items={scoreItems.map((item) => ({ ...item, percentage: item.value / Math.max(1, total) * 100 }))} />
           </div>
-        </section>
-        <section className="ref-chart-card">
-          <header className="ref-chart-header"><h3 className="ref-chart-title">👥 Fatal vs Non-Fatal Ratio</h3></header>
+        </ChartCard>
+        <ChartCard title="👥 Fatal vs Non-Fatal Ratio">
           <div className="ref-donut-container">
             <RingChart values={[metrics.fatal_count, chart.non_fatal_count]} colors={['#ef4444', '#3b82f6']} total={total} label="Total Calls" />
             <ChartLegend items={[
@@ -407,29 +469,25 @@ function DashboardContent({
               { label: 'Non-Fatal Calls', value: chart.non_fatal_count, color: '#3b82f6', percentage: 100 - metrics.fatal_rate },
             ]} />
           </div>
-        </section>
-        <section className="ref-chart-card">
-          <header className="ref-chart-header"><h3 className="ref-chart-title">📞 Inbound vs Outbound Audits</h3></header>
+        </ChartCard>
+        <ChartCard title="📞 Inbound vs Outbound Audits">
           <div className="chart-inline-legend"><span><i className="ref-legend-bullet inbound-bullet" />Inbound</span><span><i className="ref-legend-bullet outbound-bullet" />Outbound</span></div>
           <SummaryLineChart chart={chart} />
-        </section>
+        </ChartCard>
       </div>
 
       <div className="ref-charts-row secondary-charts-row">
-        <section className="ref-chart-card">
-          <header className="ref-chart-header"><h3 className="ref-chart-title">📋 Auditor Evaluation Activity</h3><span className="ref-chart-subtitle">Auditors: <strong>{data.auditors_list.length}</strong></span></header>
+        <ChartCard title="📋 Auditor Evaluation Activity" subtitle={<>Auditors: <strong>{data.auditors_list.length}</strong></>}>
           {chart.auditor_names.length ? chart.auditor_names.map((name, index) => (
             <div className="dashboard-bar-row" key={name}><span title={name}>{name}</span><div><i style={{ width: `${Math.min(100, chart.auditor_counts[index] / Math.max(1, ...chart.auditor_counts) * 100)}%` }} /></div><strong>{countText(chart.auditor_counts[index])}</strong></div>
           )) : <p className="chart-empty">No auditor evaluations match these filters.</p>}
-        </section>
-        <section className="ref-chart-card">
-          <header className="ref-chart-header"><h3 className="ref-chart-title">🏆 Top Advisor Quality Scores</h3><span className="ref-chart-subtitle">Top performers</span></header>
+        </ChartCard>
+        <ChartCard title="🏆 Top Advisor Quality Scores" subtitle="Top performers">
           {chart.top_advisors.length ? chart.top_advisors.map((name, index) => (
             <div className="dashboard-bar-row score-bar-row" key={`${name}-${index}`}><span title={name}>{name}</span><div><i style={{ width: `${Math.max(0, Math.min(100, chart.top_scores[index] ?? 0))}%` }} /></div><strong>{chart.top_scores[index]}%</strong></div>
           )) : <p className="chart-empty">No advisor scores match these filters.</p>}
-        </section>
-        <section className="ref-chart-card">
-          <header className="ref-chart-header"><h3 className="ref-chart-title">🛡️ Warning &amp; PIP Action Status</h3><span className="ref-chart-subtitle">Total: <strong>{countText(metrics.total_warnings)}</strong></span></header>
+        </ChartCard>
+        <ChartCard title="🛡️ Warning & PIP Action Status" subtitle={<>Total: <strong>{countText(metrics.total_warnings)}</strong></>}>
           <div className="ref-donut-container">
             <RingChart
               values={[chart.open_warnings, chart.in_progress_warnings, chart.closed_warnings]}
@@ -444,7 +502,7 @@ function DashboardContent({
               { label: 'Active PIPs', value: chart.active_pips, color: '#8b5cf6' },
             ]} />
           </div>
-        </section>
+        </ChartCard>
       </div>
 
       <section className="ref-quick-links-bar">

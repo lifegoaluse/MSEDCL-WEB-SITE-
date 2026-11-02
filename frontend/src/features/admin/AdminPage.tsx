@@ -55,6 +55,14 @@ interface AdminPageProps {
 
 const userRoles: UserRole[] = ['quality', 'manager', 'viewer', 'advisor']
 
+const roleAccess: Record<UserRole, string> = {
+  admin: 'Full access to audits, imports, user accounts, system settings, and security activity.',
+  quality: 'Audit and report access, file imports, and warning/PIP workflows.',
+  manager: 'Audit and report access, warning/PIP workflows, and non-admin account management.',
+  viewer: 'Read-only access to assigned advisor records and reports.',
+  advisor: 'Access to your own records and warning feedback.',
+}
+
 const pageDetails: Record<string, { title: string; description: string }> = {
   '/admin/users': {
     title: 'User management',
@@ -243,7 +251,7 @@ function UserManagement({
         <div className="admin-card-heading">
           <div>
             <h3>Create an account</h3>
-            <p>Access is assigned by role. Passwords must be at least 8 characters.</p>
+            <p>Choose the role that matches this person’s work. Passwords must be at least 8 characters.</p>
           </div>
         </div>
         <form className="admin-form-grid" onSubmit={createUser}>
@@ -261,11 +269,19 @@ function UserManagement({
           </label>
           <label>
             Role
-            <select className="form-control" value={newUser.role} onChange={(event) => setNewUser({ ...newUser, role: event.target.value as UserRole })}>
+            <select
+              className="form-control"
+              aria-describedby="new-user-role-access"
+              value={newUser.role}
+              onChange={(event) => setNewUser({ ...newUser, role: event.target.value as UserRole })}
+            >
               {userRoles.map((role) => <option key={role} value={role}>{role}</option>)}
               {user.role === 'admin' && <option value="admin">admin</option>}
             </select>
           </label>
+          <p className="role-permission-help" id="new-user-role-access">
+            <strong>{newUser.role[0].toUpperCase() + newUser.role.slice(1)} access:</strong> {roleAccess[newUser.role]}
+          </p>
           <label>
             Advisor ID
             <input className="form-control" value={newUser.advisor_id} onChange={(event) => setNewUser({ ...newUser, advisor_id: event.target.value })} />

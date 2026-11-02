@@ -104,7 +104,7 @@ Formal corrective action governance system:
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Admin** | ✅ Full | ✅ Yes | ✅ All 12 Formats | ✅ Yes | ✅ **Yes** | ✅ Complete |
 | **Quality** | ✅ Full | ✅ Yes | ✅ All 12 Formats | ✅ Yes | ❌ No | ❌ View Only |
-| **Manager** | ✅ Full | ❌ Read | ✅ View & Export | ✅ Yes | ❌ No | ❌ View Only |
+| **Manager** | ✅ Full | ❌ No | ✅ View & Export | ✅ Yes | ❌ No | ❌ View Only |
 | **Advisor** | 🔒 Own Data | ❌ No | 🔒 Own Performance| 💬 Feedback Only | ❌ No | ❌ No |
 
 ---

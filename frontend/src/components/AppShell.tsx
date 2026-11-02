@@ -62,6 +62,24 @@ const adminLinks: NavigationItem[] = [
   { icon: 'logs', label: 'Audit activity', href: '/admin/audit-logs' },
 ]
 
+function navigationForRole(user: SessionUser) {
+  const canViewInsights = ['admin', 'quality', 'manager'].includes(user.role)
+  const canImport = user.role === 'admin' || user.role === 'quality'
+
+  return {
+    audit: auditLinks,
+    insights: canViewInsights
+      ? insightLinks
+      : insightLinks.filter((item) => item.icon === 'scores'),
+    actions: actionLinks.filter((item) => item.icon !== 'import' || canImport),
+    administration: user.role === 'admin'
+      ? adminLinks
+      : user.role === 'manager'
+        ? adminLinks.slice(0, 1)
+        : [],
+  }
+}
+
 function SidebarIcon({ name }: { name: SidebarIconName | 'dashboard' }) {
   const paths: Record<SidebarIconName | 'dashboard', ReactNode> = {
     dashboard: <><rect x="3.5" y="3.5" width="7" height="7" rx="1" /><rect x="13.5" y="3.5" width="7" height="7" rx="1" /><rect x="3.5" y="13.5" width="7" height="7" rx="1" /><rect x="13.5" y="13.5" width="7" height="7" rx="1" /></>,
@@ -163,6 +181,7 @@ export function AppShell({
   onNavigate,
 }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const navigation = navigationForRole(user)
   const pageTitle = pathname === '/admin/users'
     ? 'User management'
     : pathname === '/admin/settings'
@@ -271,13 +290,15 @@ export function AppShell({
               onNavigate={onNavigate}
             />
           </div>
-          <NavigationGroup title="Audit work" items={auditLinks} pathname={pathname} onNavigate={onNavigate} />
-          <NavigationGroup title="Insights" items={insightLinks} pathname={pathname} onNavigate={onNavigate} />
-          <NavigationGroup title="Follow-up & data" items={actionLinks} pathname={pathname} onNavigate={onNavigate} />
-          {(user.role === 'admin' || user.role === 'manager') && (
+          <NavigationGroup title="Audit work" items={navigation.audit} pathname={pathname} onNavigate={onNavigate} />
+          {navigation.insights.length > 0 && (
+            <NavigationGroup title="Insights" items={navigation.insights} pathname={pathname} onNavigate={onNavigate} />
+          )}
+          <NavigationGroup title="Follow-up & data" items={navigation.actions} pathname={pathname} onNavigate={onNavigate} />
+          {navigation.administration.length > 0 && (
             <NavigationGroup
               title="Administration"
-              items={user.role === 'admin' ? adminLinks : adminLinks.slice(0, 1)}
+              items={navigation.administration}
               pathname={pathname}
               onNavigate={onNavigate}
             />

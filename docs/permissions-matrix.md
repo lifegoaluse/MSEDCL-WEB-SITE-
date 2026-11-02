@@ -31,7 +31,7 @@
 | `/warnings/<id>/delete` | ✅ | ❌ | ❌ | ❌ | ❌ | Admin only |
 | `/warnings/<id>/feedback` | ✅ | ✅ | ✅ | ✅ | ✅ | Ownership verified for viewer/advisor |
 | `/email-history` | ✅ | ✅ | ✅ | ✅ | ✅ | Viewer/advisor scoped to own advisor_id |
-| `/upload` | ✅ | ✅ | ✅ | ❌ | ❌ | File ingestion |
+| `/upload` | ✅ | ✅ | ❌ | ❌ | ❌ | File ingestion; Admin can upload even when imports are disabled for other roles |
 | `/upload/batch/<id>/delete` | ✅ | ✅ | ❌ | ❌ | ❌ | Delete import batches |
 | `/admin/users` | ✅ | ✅ | ✅ | ❌ | ❌ | User management |
 | `/admin/users/create` | ✅ | ✅ | ✅* | ❌ | ❌ | *Manager cannot create admin accounts |
@@ -62,7 +62,8 @@
 ### Admin / Quality / Manager Roles
 - Full access to all audit data
 - No advisor_id filtering applied
-- Can create warnings, uploads, manage users
+- Admin and Quality can upload files; Managers are read-only for ingestion
+- Can create warnings and manage users
 - Cannot access another user's private data without explicit permission (fail-closed by default)
 
 ## Privilege Escalation Prevention

@@ -9,17 +9,23 @@
       <h3 class="card-title">Upload Excel / CSV Audit Register</h3>
       <p class="card-subtitle">Upload Inbound and Outbound files separately. Duplicates are auto-suppressed.</p>
     </div>
-    {% if not import_enabled %}
+    {% if not import_enabled and user.role != 'admin' %}
       <span class="badge badge-danger" style="font-size:13px;padding:6px 12px;">⛔ Excel Import Currently Disabled</span>
     {% endif %}
   </div>
 
-  {% if not import_enabled %}
+  {% if not import_enabled and user.role != 'admin' %}
     <div class="alert alert-warning">
       <strong>Notice:</strong> Workbook ingestion has been temporarily disabled by an Administrator in System Settings. All previously imported audits and reports remain fully accessible.
     </div>
   {% else %}
+    {% if not import_enabled %}
+      <div class="alert alert-warning">
+        Imports are disabled for other roles. Administrators can still upload files.
+      </div>
+    {% endif %}
     <form method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="filter-grid" style="grid-template-columns: 1fr 2fr;">
         <div class="filter-group">
           <label>Department Scope *</label>
@@ -128,6 +134,7 @@
           <td><span class="badge badge-danger">{{ b.rejected }}</span></td>
           <td>
             <form method="post" action="{{ url_for('delete_import_batch', batch_id=b.id) }}" onsubmit="return confirm('⚠️ Are you sure you want to remove this import file ({{ b.source_file }})?\n\nThis will remove all {{ b.rows_inserted }} call audit records imported in this batch.')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-danger btn-sm" title="Remove import file and associated audits">🗑️ Remove</button>
             </form>
           </td>
