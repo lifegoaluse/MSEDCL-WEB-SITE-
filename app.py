@@ -1013,7 +1013,7 @@ def email_history():
 
 # --- Routes: Import Files ---
 @app.route("/upload", methods=["GET", "POST"])
-@roles("admin", "quality")
+@roles("admin", "quality", "manager")
 @csrf_protect
 def upload():
     import_enabled = get_setting("enable_excel_import", "true") == "true"

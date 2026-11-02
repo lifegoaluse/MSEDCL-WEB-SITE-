@@ -31,7 +31,7 @@
 | `/warnings/<id>/delete` | ✅ | ❌ | ❌ | ❌ | ❌ | Admin only |
 | `/warnings/<id>/feedback` | ✅ | ✅ | ✅ | ✅ | ✅ | Ownership verified for viewer/advisor |
 | `/email-history` | ✅ | ✅ | ✅ | ✅ | ✅ | Viewer/advisor scoped to own advisor_id |
-| `/upload` | ✅ | ✅ | ❌ | ❌ | ❌ | File ingestion |
+| `/upload` | ✅ | ✅ | ✅ | ❌ | ❌ | File ingestion |
 | `/upload/batch/<id>/delete` | ✅ | ✅ | ❌ | ❌ | ❌ | Delete import batches |
 | `/admin/users` | ✅ | ✅ | ✅ | ❌ | ❌ | User management |
 | `/admin/users/create` | ✅ | ✅ | ✅* | ❌ | ❌ | *Manager cannot create admin accounts |
