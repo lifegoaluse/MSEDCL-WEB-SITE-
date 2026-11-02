@@ -34,8 +34,8 @@ proposed `/api/v1` paths are not yet implemented.
 | `/admin/users` | GET | User administration | Admin, manager |
 | `/admin/users/create` | POST | User creation | Admin, manager; manager cannot grant admin |
 | `/admin/users/<user_id>/toggle` | POST | Account activation | Admin, manager; manager cannot deactivate admin |
-| `/admin/users/reset-password` | POST | Password reset | Admin |
-| `/admin/users/<user_id>/delete` | POST | Account deletion | Admin |
+| `/admin/users/reset-password` | POST | Password reset | Admin, Quality, Manager |
+| `/admin/users/<user_id>/delete` | POST | Account deletion | Admin, Quality, Manager |
 | `/admin/settings` | GET, POST | System settings | Admin |
 | `/admin/settings/test-email` | POST | SMTP test | Admin |
 | `/admin/backup/download` | GET | Database backup | Admin |

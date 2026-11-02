@@ -56,7 +56,7 @@ def register_admin_routes(app, *, roles, csrf_protect, db_factory, log_audit):
         return redirect(url_for("user_management"))
 
     @app.route("/admin/users/reset-password", methods=["POST"])
-    @roles("admin")
+    @roles("admin", "quality", "manager")
     @csrf_protect
     def user_reset_password():
         user_id = request.form.get("user_id")
@@ -75,7 +75,7 @@ def register_admin_routes(app, *, roles, csrf_protect, db_factory, log_audit):
         return redirect(url_for("user_management"))
 
     @app.route("/admin/users/<int:user_id>/delete", methods=["POST"])
-    @roles("admin")
+    @roles("admin", "quality", "manager")
     @csrf_protect
     def user_delete(user_id):
         result = delete_managed_user(
